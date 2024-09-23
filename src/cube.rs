@@ -1,14 +1,18 @@
 use nalgebra_glm::Vec3;
-use crate::ray_intersect::{RayIntersect, Material, Intersect};
+use crate::ray_intersect::{RayIntersect, Intersect, Material};
+use crate::texture::Texture;  
+use std::rc::Rc;
+
 
 pub struct Cube {
-    pub min: Vec3,  // Corner of the cube (min x, y, z)
-    pub max: Vec3,  // Opposite corner (max x, y, z)
-    pub material: Material,
+    pub min: Vec3,  // Esquina mínima del cubo (x, y, z)
+    pub max: Vec3,  // Esquina máxima del cubo (x, y, z)
+    pub texture: Rc<Texture>,  // Textura aplicada al cubo
 }
 
 impl RayIntersect for Cube {
     fn ray_intersect(&self, ray_origin: &Vec3, ray_direction: &Vec3) -> Intersect {
+        // Cálculo de la intersección del rayo con el cubo
         let mut t_min = (self.min.x - ray_origin.x) / ray_direction.x;
         let mut t_max = (self.max.x - ray_origin.x) / ray_direction.x;
 
@@ -30,6 +34,7 @@ impl RayIntersect for Cube {
         if t_y_min > t_min {
             t_min = t_y_min;
         }
+
         if t_y_max < t_max {
             t_max = t_y_max;
         }
@@ -48,23 +53,32 @@ impl RayIntersect for Cube {
         if t_z_min > t_min {
             t_min = t_z_min;
         }
-        if t_z_max < t_max {
-            //t_max = t_z_max;
-        }
 
+        // Si el rayo no intersecta el cubo, devolvemos una intersección vacía
         if t_min < 0.0 {
             return Intersect::empty();
         }
 
-        let point = ray_origin + ray_direction * t_min;
-        let normal = self.calculate_normal(point);
-        let distance = t_min;
+        // Calcular el punto de intersección
+        let point_on_surface = ray_origin + ray_direction * t_min;
 
-        Intersect::new(point, normal, distance, self.material)
+        // Calcular las coordenadas UV basadas en la posición del punto de intersección en la cara del cubo
+        let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
+        let v = (point_on_surface.z - self.min.z) / (self.max.z - self.min.z);
+
+        // Aplicar la textura en función de las coordenadas UV
+        let color = self.texture.get_color(u, v);
+
+        // Calcular la normal del cubo en el punto de intersección
+        let normal = self.calculate_normal(point_on_surface);
+
+        // Retornar la intersección con la textura aplicada
+        Intersect::new(point_on_surface, normal, t_min, Material { diffuse: color })
     }
 }
 
 impl Cube {
+    // Calcular la normal según la cara del cubo en la que se encuentra el punto de intersección
     fn calculate_normal(&self, point: Vec3) -> Vec3 {
         let epsilon = 1e-4;
         if (point.x - self.min.x).abs() < epsilon {

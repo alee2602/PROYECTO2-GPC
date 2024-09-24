@@ -31,7 +31,7 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Cube]) -> Co
     }
 
     if !closest_intersect.is_intersecting {
-        return Color::new(4, 12, 36); 
+        return Color::new(4, 12, 36);
     }
 
     closest_intersect.material.diffuse
@@ -64,38 +64,46 @@ pub fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera) 
     }
 }
 
-fn create_voxelized_cube(min: Vec3, max: Vec3, texture: Rc<Texture>, voxel_size: f32) -> Vec<Cube> {
+pub fn create_voxelized_cube(
+    min: Vec3,
+    max: Vec3,
+    top_texture: Rc<Texture>,
+    side_texture: Rc<Texture>,
+    bottom_texture: Rc<Texture>,
+    voxel_size: f32,
+) -> Vec<Cube> {
     let mut cubes = Vec::new();
 
-    println!("min: {:?}, max: {:?}, voxel_size: {}", min, max, voxel_size);
+    let x_steps = ((max.x - min.x) / voxel_size).ceil() as i32;
+    let y_steps = ((max.y - min.y) / voxel_size).ceil() as i32;
+    let z_steps = ((max.z - min.z) / voxel_size).ceil() as i32;
 
-    let x_min = min.x;
-    let y_min = min.y;
-    let z_min = min.z;
+    for i in 0..x_steps {
+        for j in 0..y_steps {
+            for k in 0..z_steps {
+                let cube_min = Vec3::new(
+                    min.x + i as f32 * voxel_size,
+                    min.y + j as f32 * voxel_size,
+                    min.z + k as f32 * voxel_size,
+                );
 
-    let x_max = max.x;
-    let y_max = max.y;
-    let z_max = max.z;
+                let cube_max = Vec3::new(
+                    (cube_min.x + voxel_size).min(max.x),
+                    (cube_min.y + voxel_size).min(max.y),
+                    (cube_min.z + voxel_size).min(max.z),
+                );
 
-    let mut x = x_min;
-    while x < x_max {
-        let mut y = y_min;
-        while y < y_max {
-            let mut z = z_min;
-            while z < z_max {
-                // Crear un subcubo
-                let subcube = Cube {
-                    min: Vec3::new(x, y, z),
-                    max: Vec3::new(x + voxel_size, y + voxel_size, z + voxel_size),
-                    texture: Rc::clone(&texture),
+                let cube = Cube {
+                    min: cube_min,
+                    max: cube_max,
+                    top_texture: Rc::clone(&top_texture),
+                    side_texture: Rc::clone(&side_texture),
+                    bottom_texture: Rc::clone(&bottom_texture),
                 };
-                cubes.push(subcube);
 
-                z += voxel_size;
+                cubes.push(cube);
             }
-            y += voxel_size;
         }
-        x += voxel_size;
     }
 
     cubes
@@ -118,103 +126,133 @@ fn main() {
     )
     .unwrap();
 
-    let grass_texture = Rc::new(Texture::new("src/textures/grass.png"));
-    let wood_texture = Rc::new(Texture::new("src/textures/wood.png"));
+    let grass_texture = Rc::new(Texture::new("src/textures/grass_top.png"));
+    let grass_side_texture = Rc::new(Texture::new("src/textures/grass_side.png"));
+    let dirt_texture = Rc::new(Texture::new("src/textures/dirt.png"));
+    let wood_texture = Rc::new(Texture::new("src/textures/cherrylog.png"));
+    let woodplank_texture = Rc::new(Texture::new("src/textures/woodplank.webp"));
     let leaves_texture = Rc::new(Texture::new("src/textures/cherryblossom.jpg"));
+    let water_texture = Rc::new(Texture::new("src/textures/water.webp"));
 
-    // Crear una base plana para el suelo
-    let base_blocks = create_voxelized_cube(
-        Vec3::new(-10.0, -1.0, -10.0), 
-        Vec3::new(10.0, 0.0, 10.0),    
-        Rc::clone(&grass_texture),     
-        2.75,                          
+    let base_blocks_left = create_voxelized_cube(
+        Vec3::new(-10.0, -2.75, -10.0), 
+        Vec3::new(-2.0, 0.0, 10.0),     
+        Rc::clone(&grass_texture),      
+        Rc::clone(&grass_side_texture), 
+        Rc::clone(&dirt_texture),       
+        2.75,                           
     );
 
-    let hill_block_1 = create_voxelized_cube(
-        Vec3::new(-7.0, 2.0, -7.0), 
-        Vec3::new(7.0, 3.0, 7.0),
+    let base_blocks_right = create_voxelized_cube(
+        Vec3::new(2.0, -2.75, -10.0),
+        Vec3::new(10.0, 0.0, 10.0),
         Rc::clone(&grass_texture),
-        2.75, 
-    );
-
-    let hill_block_2 = create_voxelized_cube(
-        Vec3::new(-3.0, 4.0, -3.0),
-        Vec3::new(3.0, 6.0, 3.0),
-        Rc::clone(&grass_texture),
-        2.75, 
-    );
-
-    let trunk_blocks_1 = create_voxelized_cube(
-        Vec3::new(-0.7, 6.0, -0.7), 
-        Vec3::new(0.7, 11.0, 0.7),  
-        Rc::clone(&wood_texture),   
-        2.75,                       
-    );
-
-    let leaves_blocks_1_1 = create_voxelized_cube(
-        Vec3::new(-2.5, 11.0, -2.5), 
-        Vec3::new(2.5, 12.0, 2.5),
-        Rc::clone(&leaves_texture), 
-        2.75,                       
-    );
-
-    let leaves_blocks_1_2 = create_voxelized_cube(
-        Vec3::new(-2.0, 12.0, -2.0), 
-        Vec3::new(2.0, 13.0, 2.0),
-        Rc::clone(&leaves_texture),
+        Rc::clone(&grass_side_texture),
+        Rc::clone(&dirt_texture),
         2.75,
     );
 
-    let leaves_blocks_1_3 = create_voxelized_cube(
-        Vec3::new(-1.5, 13.0, -1.5), 
-        Vec3::new(1.5, 14.0, 1.5),
+    let river_blocks = create_voxelized_cube(
+        Vec3::new(-2.0, -2.75, -10.0),
+        Vec3::new(2.0, 0.0, 10.0),
+        Rc::clone(&water_texture), 
+        Rc::clone(&water_texture), 
+        Rc::clone(&water_texture), 
+        2.75,
+    );
+
+    // Colina
+    let hill_block_1 = create_voxelized_cube(
+        Vec3::new(-10.0, 0.0, -10.0),
+        Vec3::new(-3.0, 2.75, -2.0),
+        Rc::clone(&grass_texture),      
+        Rc::clone(&grass_side_texture), 
+        Rc::clone(&dirt_texture),       
+        2.75,
+    );
+
+    // Primer árbol
+    let trunk_blocks_1 = create_voxelized_cube(
+        Vec3::new(-7.5, -1.0, -7.5),
+        Vec3::new(-5.5, 7.0, -5.5),
+        Rc::clone(&wood_texture), 
+        Rc::clone(&wood_texture), 
+        Rc::clone(&wood_texture), 
+        2.75,
+    );
+
+    let leaves_blocks_1_1 = create_voxelized_cube(
+        Vec3::new(-9.5, 7.0, -9.5), 
+        Vec3::new(-3.5, 9.75, -3.5),
+        Rc::clone(&leaves_texture), 
+        Rc::clone(&leaves_texture), 
+        Rc::clone(&leaves_texture), 
+        2.75,
+    );
+
+    let leaves_blocks_1_2 = create_voxelized_cube(
+        Vec3::new(-8.5, 9.75, -8.5), 
+        Vec3::new(-4.5, 12.5, -4.5), 
+        Rc::clone(&leaves_texture),
+        Rc::clone(&leaves_texture),
         Rc::clone(&leaves_texture),
         2.75,
     );
 
     // Segundo árbol
     let trunk_blocks_2 = create_voxelized_cube(
-        Vec3::new(9.0, 1.0, 9.0),  
-        Vec3::new(10.0, 6.0, 10.0), 
+        Vec3::new(6.5, -1.0, 6.5), 
+        Vec3::new(8.5, 5.0, 8.5),
+        Rc::clone(&wood_texture),
+        Rc::clone(&wood_texture),
         Rc::clone(&wood_texture),
         2.75,
     );
-    
+
     let leaves_blocks_2_1 = create_voxelized_cube(
-        Vec3::new(7.5, 6.0, 7.5),  
-        Vec3::new(10.5, 7.0, 10.5),
+        Vec3::new(4.5, 5.0, 4.5),   
+        Vec3::new(10.5, 7.75, 10.5), 
         Rc::clone(&leaves_texture),
-        2.75,
-    );
-    
-    let leaves_blocks_2_2 = create_voxelized_cube(
-        Vec3::new(8.0, 7.0, 8.0),  
-        Vec3::new(10.0, 8.0, 10.0),
+        Rc::clone(&leaves_texture),
         Rc::clone(&leaves_texture),
         2.75,
     );
 
-    // Imprimir la cantidad de subcubos generados para la colina
-    println!(
-        "Número de subcubos para hill_block_1: {}",
-        hill_block_1.len()
+    let leaves_blocks_2_2 = create_voxelized_cube(
+        Vec3::new(5.5, 7.75, 5.5),   
+    Vec3::new(9.5, 10.5, 9.5),
+        Rc::clone(&leaves_texture),
+        Rc::clone(&leaves_texture),
+        Rc::clone(&leaves_texture),
+        2.75,
+    );
+
+    // Base del puente
+    let bridge_base = create_voxelized_cube(
+        Vec3::new(-5.0, 0.0, 1.0),
+        Vec3::new(5.0, 1.0, 3.0),
+        Rc::clone(&woodplank_texture),
+        Rc::clone(&woodplank_texture),
+        Rc::clone(&woodplank_texture),
+        2.75,
     );
 
     let mut objects = Vec::new();
-    objects.extend(base_blocks); 
-    objects.extend(hill_block_1); 
-    objects.extend(hill_block_2);
+    objects.extend(base_blocks_left);
+    objects.extend(base_blocks_right);
+    objects.extend(river_blocks);
+    objects.extend(hill_block_1);
     objects.extend(trunk_blocks_1);
     objects.extend(leaves_blocks_1_1);
     objects.extend(leaves_blocks_1_2);
-    objects.extend(leaves_blocks_1_3);
     objects.extend(trunk_blocks_2);
     objects.extend(leaves_blocks_2_1);
     objects.extend(leaves_blocks_2_2);
+    objects.extend(bridge_base);
     println!("Número total de objetos: {}", objects.len());
 
     let mut camera = Camera::new(
-        Vec3::new(0.0, 5.0, 40.0),
+        Vec3::new(0.0, 5.0, 35.0),
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0),
     );

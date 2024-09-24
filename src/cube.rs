@@ -1,13 +1,14 @@
 use nalgebra_glm::Vec3;
 use crate::ray_intersect::{RayIntersect, Intersect, Material};
-use crate::texture::Texture;  
+use crate::texture::Texture;
 use std::rc::Rc;
-
 
 pub struct Cube {
     pub min: Vec3,  // Esquina mínima del cubo (x, y, z)
     pub max: Vec3,  // Esquina máxima del cubo (x, y, z)
-    pub texture: Rc<Texture>,  // Textura aplicada al cubo
+    pub top_texture: Rc<Texture>,     // Textura aplicada a la parte superior del cubo
+    pub side_texture: Rc<Texture>,    // Textura aplicada a los lados del cubo
+    pub bottom_texture: Rc<Texture>,  // Textura aplicada a la parte inferior del cubo
 }
 
 impl RayIntersect for Cube {
@@ -62,12 +63,28 @@ impl RayIntersect for Cube {
         // Calcular el punto de intersección
         let point_on_surface = ray_origin + ray_direction * t_min;
 
-        // Calcular las coordenadas UV basadas en la posición del punto de intersección en la cara del cubo
-        let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
-        let v = (point_on_surface.z - self.min.z) / (self.max.z - self.min.z);
-
-        // Aplicar la textura en función de las coordenadas UV
-        let color = self.texture.get_color(u, v);
+        // Calcular la textura adecuada según la cara del cubo
+        let color = if (point_on_surface.y - self.max.y).abs() < 1e-4 {
+            // Cara superior
+            let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
+            let v = (point_on_surface.z - self.min.z) / (self.max.z - self.min.z);
+            self.top_texture.get_color(u, v)
+        } else if (point_on_surface.y - self.min.y).abs() < 1e-4 {
+            // Cara inferior
+            let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
+            let v = (point_on_surface.z - self.min.z) / (self.max.z - self.min.z);
+            self.bottom_texture.get_color(u, v)
+        } else if (point_on_surface.x - self.min.x).abs() < 1e-4 || (point_on_surface.x - self.max.x).abs() < 1e-4 {
+            // Caras laterales izquierda y derecha
+            let u = (point_on_surface.z - self.min.z) / (self.max.z - self.min.z);
+            let v = (point_on_surface.y - self.min.y) / (self.max.y - self.min.y);
+            self.side_texture.get_color(u, v)
+        } else {
+            // Caras frontal y trasera
+            let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
+            let v = (point_on_surface.y - self.min.y) / (self.max.y - self.min.y);
+            self.side_texture.get_color(u, v) // Usamos la textura lateral aquí
+        };
 
         // Calcular la normal del cubo en el punto de intersección
         let normal = self.calculate_normal(point_on_surface);
@@ -96,3 +113,4 @@ impl Cube {
         }
     }
 }
+

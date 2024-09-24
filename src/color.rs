@@ -63,3 +63,13 @@ impl fmt::Display for Color {
         write!(f, "Color(r: {}, g: {}, b: {})", self.r, self.g, self.b)
     }
 }
+
+impl Color {
+    pub fn lerp(&self, other: Color, factor: f32) -> Color {
+        let r = (self.r as f32 + (other.r as f32 - self.r as f32) * factor).round() as u8;
+        let g = (self.g as f32 + (other.g as f32 - self.g as f32) * factor).round() as u8;
+        let b = (self.b as f32 + (other.b as f32 - self.b as f32) * factor).round() as u8;
+
+        Color { r, g, b }
+    }
+}

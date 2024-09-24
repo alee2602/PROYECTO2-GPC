@@ -46,4 +46,11 @@ impl Camera {
 
         self.eye = new_eye;
     }
+
+     // Función para acercar o alejar la cámara
+    pub fn zoom(&mut self, amount: f32) {
+        let direction = (self.center - self.eye).normalize();  // Dirección hacia el centro
+        self.eye += direction * amount;  // Acercar o alejar en esa dirección
+    }
+    
 }

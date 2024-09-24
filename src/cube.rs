@@ -1,11 +1,14 @@
 use nalgebra_glm::Vec3;
-use crate::ray_intersect::{RayIntersect, Intersect, Material};
+use crate::ray_intersect::{RayIntersect, Intersect};
 use crate::texture::Texture;
 use std::rc::Rc;
+use crate::material::Material;
 
+#[derive(Clone)]
 pub struct Cube {
     pub min: Vec3,  // Esquina mínima del cubo (x, y, z)
     pub max: Vec3,  // Esquina máxima del cubo (x, y, z)
+    pub material: Material,
     pub top_texture: Rc<Texture>,     // Textura aplicada a la parte superior del cubo
     pub side_texture: Rc<Texture>,    // Textura aplicada a los lados del cubo
     pub bottom_texture: Rc<Texture>,  // Textura aplicada a la parte inferior del cubo
@@ -63,7 +66,7 @@ impl RayIntersect for Cube {
         // Calcular el punto de intersección
         let point_on_surface = ray_origin + ray_direction * t_min;
 
-        // Calcular la textura adecuada según la cara del cubo
+         // Calcular la textura adecuada según la cara del cubo
         let color = if (point_on_surface.y - self.max.y).abs() < 1e-4 {
             // Cara superior
             let u = (point_on_surface.x - self.min.x) / (self.max.x - self.min.x);
@@ -86,11 +89,17 @@ impl RayIntersect for Cube {
             self.side_texture.get_color(u, v) // Usamos la textura lateral aquí
         };
 
+        // Crear un nuevo material usando el color calculado
+        let material = Material {
+            diffuse: color,
+            ..self.material  // Mantener los otros valores del material
+        };
+
         // Calcular la normal del cubo en el punto de intersección
         let normal = self.calculate_normal(point_on_surface);
 
         // Retornar la intersección con la textura aplicada
-        Intersect::new(point_on_surface, normal, t_min, Material { diffuse: color })
+        Intersect::new(point_on_surface, normal, t_min, material)
     }
 }
 

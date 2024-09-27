@@ -561,7 +561,7 @@ fn main() {
             let glowstone_light = Light {
                 position: Vec3::new(7.0, 6.375, -7.125), 
                 color: Color::new(255, 223, 0),      
-                intensity: 0.01,                     
+                intensity: 0.1,                     
             };
             lights.push(glowstone_light);
         }

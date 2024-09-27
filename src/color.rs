@@ -25,6 +25,23 @@ impl Color {
     pub fn to_hex(&self) -> u32 {
         ((self.r as u32) << 16) | ((self.g as u32) << 8) | (self.b as u32)
     }
+
+    // New function to scale the color by a factor (brightness adjustment)
+    pub fn scale(&self, factor: f32) -> Self {
+        Color {
+            r: (self.r as f32 * factor).clamp(0.0, 255.0) as u8,
+            g: (self.g as f32 * factor).clamp(0.0, 255.0) as u8,
+            b: (self.b as f32 * factor).clamp(0.0, 255.0) as u8,
+        }
+    }
+    // New function to clamp the color values to ensure they are between 0 and 255
+    pub fn clamp(&self) -> Self {
+        Color {
+            r: self.r.min(255),
+            g: self.g.min(255),
+            b: self.b.min(255),
+        }
+    }
 }
 
 // Implement addition for Color

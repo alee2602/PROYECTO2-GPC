@@ -9,9 +9,9 @@ pub struct Cube {
     pub min: Vec3,  // Esquina mínima del cubo (x, y, z)
     pub max: Vec3,  // Esquina máxima del cubo (x, y, z)
     pub material: Material,
-    pub top_texture: Rc<Texture>,     // Textura aplicada a la parte superior del cubo
-    pub side_texture: Rc<Texture>,    // Textura aplicada a los lados del cubo
-    pub bottom_texture: Rc<Texture>,  // Textura aplicada a la parte inferior del cubo
+    pub top_texture: Rc<Texture>,     
+    pub side_texture: Rc<Texture>,    
+    pub bottom_texture: Rc<Texture>,  
 }
 
 impl RayIntersect for Cube {
@@ -122,4 +122,5 @@ impl Cube {
         }
     }
 }
+
 
